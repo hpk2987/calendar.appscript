@@ -21,7 +21,7 @@ const modificadorServicio = "pareja";
 const servicios = ["x4 manos", "RELAJANTE", "55", "75", "spa"];
 const grupoMonto = "(\\$?[0-9]*\\.?[0-9]*\\/[0-9]*\\.?[0-9]*)";
 const regex = new RegExp(
-    `^(.*) (${modificadorServicio})?(${servicios.join("|")}) ${grupoMonto}?`,"i");
+    `^(.*?) (${modificadorServicio} )?(${servicios.join("|")}) ${grupoMonto}?`,"i");
 
 let calcularMontoParaServicioSinMonto: (servicio: string) => Monto = (s) => {
     switch (s) {
@@ -47,7 +47,7 @@ const aplicarModificadorMonto = (monto: Monto, modificador: boolean) => {
 const calcularMontoDesdeEvento = (match: string): Monto => {
     return {
         efectivo :parseFloat(match.split("/")[0].replace("$","").replace(".","")),
-        transferencia: parseFloat(match.split("/")[0].replace("$","").replace(".",""))
+        transferencia: parseFloat(match.split("/")[1].replace(".",""))
     }
 }
 
@@ -70,11 +70,11 @@ export const interpretar = (evento: string): Evento => {
     return {
         crudo: evento,
         descripcion: match[1],
-        servicio: match[2] === modificadorServicio ? match[2] + " " + match[3] : match[2],
+        servicio: `${match[2]||""}${match[3]}`,
         monto: aplicarModificadorMonto(
-            (match.length === ((match[2] === modificadorServicio ? 1 : 0) + 4))
+            match[4]
                 ? calcularMontoDesdeEvento(match[4])
                 : calcularMontoParaServicioSinMonto(match[3]),
-            match[2] === modificadorServicio)
+            !!match[2])
     }
 }

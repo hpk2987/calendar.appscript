@@ -5,6 +5,7 @@ describe('InterpreteEventos', () => {
   test('deberia interpretar el evento', () => {
     expect(interpretar("Nombre ficticio 55 $22.000/44.000"))
       .toStrictEqual({
+        crudo: "Nombre ficticio 55 $22.000/44.000",
         descripcion: 'Nombre ficticio',
         servicio: "55",
         monto: {
@@ -17,6 +18,7 @@ describe('InterpreteEventos', () => {
   test('deberia dividir el monto a la mitad', () => {
     expect(interpretar("Nombre ficticio pareja 55 $22.000/44.000"))
       .toStrictEqual({
+        crudo: "Nombre ficticio pareja 55 $22.000/44.000",
         descripcion: 'Nombre ficticio',
         servicio: "pareja 55",
         monto: {
@@ -29,6 +31,7 @@ describe('InterpreteEventos', () => {
   test('deberia obtener el valor de la funcion calcularMontoParaServicioPago cuando dice pago', () => {
     expect(interpretar("Nombre ficticio 55 pago"))
       .toStrictEqual({
+        crudo: "Nombre ficticio 55 pago",
         descripcion: 'Nombre ficticio',
         servicio: "55",
         monto: {
