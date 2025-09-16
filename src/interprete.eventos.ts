@@ -4,7 +4,8 @@ export type Monto = {
     transferencia: number
 }
 
-export interface ParsedEvent {
+export interface Evento {
+    crudo: string;
     descripcion: string;
     servicio: string;
     monto: Monto
@@ -15,25 +16,15 @@ const montoVacio = {
     transferencia: 0
 }
 
-const demarcadores = {
-    separacion: ["pareja", "55", "75"],
-    pagoDividido: "pareja",
-    yaPagado: "pago",
-    pago: [/^\$/, /^pago$/]
-}
 
-let calcularMontoParaServicioPago: (servicio: string) => Monto = (s) => {
+const modificadorServicio = "pareja";
+const servicios = ["x4 manos", "RELAJANTE", "55", "75", "spa"];
+const grupoMonto = "(\\$?[0-9]*\\.?[0-9]*\\/[0-9]*\\.?[0-9]*)";
+const regex = new RegExp(
+    `^(.*) (${modificadorServicio})?(${servicios.join("|")}) ${grupoMonto}?`,"i");
+
+let calcularMontoParaServicioSinMonto: (servicio: string) => Monto = (s) => {
     switch (s) {
-        case "55":
-            return {
-                efectivo: 1,
-                transferencia: 1
-            };
-        case "75":
-            return {
-                efectivo: 1,
-                transferencia: 1
-            };
         default:
             return {
                 efectivo: 1,
@@ -42,100 +33,48 @@ let calcularMontoParaServicioPago: (servicio: string) => Monto = (s) => {
     }
 }
 
-export class InterpreteEventos {
-
-    static cambiarCalculoParaServicioPago(funcion: (servicio: string) => Monto) {
-        calcularMontoParaServicioPago = funcion;
-    }
-
-    static interpretarEvento(event: string): ParsedEvent {
-        const partes = event.split(" ");
-        const separacion = partes.find(x => demarcadores.separacion.includes(x));
-
-        if (!separacion) {
-            return {
-                descripcion: "No se pudo interpretar => " + event,
-                servicio: "",
-                monto: montoVacio,
-            }
-        }
-
-        const indexSeparacion = partes.indexOf(separacion);
+const aplicarModificadorMonto = (monto: Monto, modificador: boolean) => {
+    if (modificador) {
         return {
-            descripcion: partes.slice(0, indexSeparacion).join(" "),
-            ...InterpreteEventos.calcularMontoYServicio(partes.slice(indexSeparacion, partes.length))
-        };
+            efectivo: monto.efectivo / 2,
+            transferencia: monto.transferencia / 2
+        }
+    } else {
+        return monto;
+    }
+}
+
+const calcularMontoDesdeEvento = (match: string): Monto => {
+    return {
+        efectivo :parseFloat(match.split("/")[0].replace("$","").replace(".","")),
+        transferencia: parseFloat(match.split("/")[0].replace("$","").replace(".",""))
+    }
+}
+
+export const cambiarCalculoMontoParaServicioSinMonto = (funcion: (servicio: string) => Monto) => {
+    calcularMontoParaServicioSinMonto = funcion;
+}
+
+export const interpretar = (evento: string): Evento => {
+    const match = evento.match(regex);
+
+    if (!match) {
+        return {
+            crudo: "Error => " + evento,
+            descripcion: "",
+            servicio: "",
+            monto: montoVacio
+        }
     }
 
-    static calcularMontoYServicio(partes: string[]): {
-        monto: Monto,
-        servicio: string
-    } {
-        if (partes.length === 0) {
-            return {
-                monto: montoVacio,
-                servicio: "Error => " + partes.join(" ")
-            };
-        }
-
-        const separacion = partes.find(x => demarcadores.pago.some(y => x.match(y)));
-        if (!separacion) {
-            return {
-                monto: montoVacio,
-                servicio: "Error => " + partes.join(" ")
-            };
-        }
-
-        const indexSeparacion = partes.indexOf(separacion);
-        const servicio = partes.slice(0, indexSeparacion).join(" ");
-        const monto = InterpreteEventos.calcularMonto(
-            servicio,
-            partes.slice(indexSeparacion, partes.length));
-
-        return monto !== montoVacio
-            ? {
-                servicio,
-                monto: monto
-            }
-            : {
-                servicio: "Error => " + partes.join(" "),
-                monto: montoVacio
-            };
-    }
-
-    static calcularMonto(servicio: string, partes: string[]): Monto {
-        if (partes.length === 0) {
-            return montoVacio;
-        }
-
-        const pagoDividido = servicio.startsWith(demarcadores.pagoDividido);
-        let monto;
-        if (partes[0] === demarcadores.yaPagado) {
-            monto = calcularMontoParaServicioPago(pagoDividido
-                ? servicio.replace(demarcadores.pagoDividido + " ", "")
-                : servicio)
-        } else {
-            const regex: RegExp = /\$(\d+\.\d+)\/(\d+\.\d+)/;
-            const match = partes.join(" ").match(regex);
-
-            if (match) {
-                monto = {
-                    efectivo: parseFloat(match[1].replaceAll(".", "")),
-                    transferencia: parseFloat(match[2].replaceAll(".", "")),
-                }
-                if (Number.isNaN(monto.efectivo) || Number.isNaN(monto.transferencia)) {
-                    return montoVacio;
-                }
-            } else {
-                return montoVacio;
-            }
-        }
-
-        return pagoDividido
-            ? {
-                efectivo: monto.efectivo / 2,
-                transferencia: monto.transferencia / 2
-            }
-            : monto;
+    return {
+        crudo: evento,
+        descripcion: match[1],
+        servicio: match[2] === modificadorServicio ? match[2] + " " + match[3] : match[2],
+        monto: aplicarModificadorMonto(
+            (match.length === ((match[2] === modificadorServicio ? 1 : 0) + 4))
+                ? calcularMontoDesdeEvento(match[4])
+                : calcularMontoParaServicioSinMonto(match[3]),
+            match[2] === modificadorServicio)
     }
 }

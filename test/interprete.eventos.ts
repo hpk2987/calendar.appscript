@@ -1,9 +1,9 @@
 // Import the function you want to test
-import { InterpreteEventos } from '../src/interprete.eventos';
+import { interpretar } from '../src/interprete.eventos';
 
 describe('InterpreteEventos', () => {
   test('deberia interpretar el evento', () => {
-    expect(InterpreteEventos.interpretarEvento("Nombre ficticio 55 $22.000/44.000"))
+    expect(interpretar("Nombre ficticio 55 $22.000/44.000"))
       .toStrictEqual({
         descripcion: 'Nombre ficticio',
         servicio: "55",
@@ -15,7 +15,7 @@ describe('InterpreteEventos', () => {
   });
 
   test('deberia dividir el monto a la mitad', () => {
-    expect(InterpreteEventos.interpretarEvento("Nombre ficticio pareja 55 $22.000/44.000"))
+    expect(interpretar("Nombre ficticio pareja 55 $22.000/44.000"))
       .toStrictEqual({
         descripcion: 'Nombre ficticio',
         servicio: "pareja 55",
@@ -27,7 +27,7 @@ describe('InterpreteEventos', () => {
   });
 
   test('deberia obtener el valor de la funcion calcularMontoParaServicioPago cuando dice pago', () => {
-    expect(InterpreteEventos.interpretarEvento("Nombre ficticio 55 pago"))
+    expect(interpretar("Nombre ficticio 55 pago"))
       .toStrictEqual({
         descripcion: 'Nombre ficticio',
         servicio: "55",
