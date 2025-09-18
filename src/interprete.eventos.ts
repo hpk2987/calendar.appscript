@@ -8,7 +8,12 @@ export interface Evento {
     crudo: string;
     descripcion: string;
     servicio: string;
-    monto: Monto
+    monto: Monto;
+    error: boolean;
+    debug?: {
+        regex: RegExp,
+        match: RegExpMatchArray | null
+    }
 }
 
 const montoVacio = {
@@ -18,10 +23,21 @@ const montoVacio = {
 
 
 const modificadorServicio = "pareja";
-const servicios = ["x4 manos", "RELAJANTE", "55", "75", "spa"];
-const grupoMonto = "(\\$?[0-9]*\\.?[0-9]*\\/[0-9]*\\.?[0-9]*)";
-const regex = new RegExp(
-    `^(.*?) (${modificadorServicio} )?(${servicios.join("|")}) ${grupoMonto}?`,"i");
+const servicios = [
+    "x4 manos", "4 manos",
+    "4\\/4",
+    "RELAJANTE",
+    "spa",
+    "55", "75", "40", "60", "80", "35", "34"];
+
+//"(?: (\$?(\d+(?:[.,]\d+)?)(?:\/(\d+(?:[.,]\d+)?))?))?"
+const patronNum = "\d+(?:[.]\d+)?"
+const grupoMonto = `(\\$?${patronNum}(?:\\/${patronNum}))`;
+
+const regexConServicio = new RegExp(
+    `^(.*?) (${modificadorServicio} )?(${servicios.join("|")})(:? ${grupoMonto})?`, "i");
+const regexSinServicio = new RegExp(
+    `^(.*?) ${grupoMonto}`, "i");
 
 let calcularMontoParaServicioSinMonto: (servicio: string) => Monto = (s) => {
     switch (s) {
@@ -46,8 +62,8 @@ const aplicarModificadorMonto = (monto: Monto, modificador: boolean) => {
 
 const calcularMontoDesdeEvento = (match: string): Monto => {
     return {
-        efectivo :parseFloat(match.split("/")[0].replace("$","").replace(".","")),
-        transferencia: parseFloat(match.split("/")[1].replace(".",""))
+        efectivo: parseFloat(match.split("/")[0].replace("$", "").replace(".", "")),
+        transferencia: parseFloat(match.split("/")[1].replace(".", ""))
     }
 }
 
@@ -56,25 +72,41 @@ export const cambiarCalculoMontoParaServicioSinMonto = (funcion: (servicio: stri
 }
 
 export const interpretar = (evento: string): Evento => {
-    const match = evento.match(regex);
+    let regex = regexConServicio;
+    let match = evento.match(regex);
 
     if (!match) {
-        return {
-            crudo: "Error => " + evento,
-            descripcion: "",
-            servicio: "",
-            monto: montoVacio
+        regex = regexSinServicio
+        match = evento.match(regex);
+
+        if (!match) {
+            return {
+                debug: {
+                    regex: regex,
+                    match: match
+                },
+                crudo: "Error => " + evento,
+                descripcion: "",
+                servicio: "",
+                monto: montoVacio,
+                error: true
+            }
         }
     }
 
     return {
         crudo: evento,
         descripcion: match[1],
-        servicio: `${match[2]||""}${match[3]}`,
+        servicio: `${match[2] || ""}${match[3]}`,
         monto: aplicarModificadorMonto(
             match[4]
                 ? calcularMontoDesdeEvento(match[4])
                 : calcularMontoParaServicioSinMonto(match[3]),
-            !!match[2])
+            !!match[2]),
+        error: false,
+        debug: {
+            regex: regex,
+            match: match
+        }
     }
 }
