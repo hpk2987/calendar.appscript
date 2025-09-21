@@ -1,0 +1,166 @@
+import { JSONDB } from "../src/json.db";
+import { GestorArchivos } from "../src/gestor.archivos";
+
+type TestRecord = { id: number; name: string };
+
+describe("JSONDB.cargar", () => {
+    let gestorArchivosMock: GestorArchivos;
+
+    beforeEach(() => {
+        gestorArchivosMock = {
+            cargar: jest.fn(),
+            guardar: jest.fn()
+        };
+    });
+
+    it("should not throw if file does not exist (registros becomes empty array)", () => {
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue(undefined);
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        expect(() => db.cargar("archivo.json")).not.toThrow();
+    });
+
+    it("should not throw if file contains valid array JSON", () => {
+        const records: TestRecord[] = [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }];
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue(JSON.stringify(records));
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        expect(() => db.cargar("archivo.json")).not.toThrow();
+    });
+
+    it("should throw error if file contains non-array JSON", () => {
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue(JSON.stringify({ foo: "bar" }));
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        expect(() => db.cargar("archivo.json")).toThrow("La base de datos no contiene un arrray");
+    });
+
+    it("should throw error if file contains invalid JSON", () => {
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue("invalid json");
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        expect(() => db.cargar("archivo.json")).toThrow();
+    });
+});
+
+describe("JSONDB.guardar", () => {
+    let gestorArchivosMock: GestorArchivos;
+
+    beforeEach(() => {
+        gestorArchivosMock = {
+            cargar: jest.fn(),
+            guardar: jest.fn()
+        };
+    });
+
+    it("should call gestorArchivos.guardar with the internal registros array after cargar", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        const records: TestRecord[] = [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }];
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue(JSON.stringify(records));
+        db.cargar("archivo.json");
+
+        db.guardar("archivo.json");
+
+        expect(gestorArchivosMock.guardar).toHaveBeenCalledWith(
+            "archivo.json",
+            JSON.stringify(records)
+        );
+    });
+
+    it("should call gestorArchivos.guardar with an empty array if cargar loaded nothing", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue(undefined);
+        db.cargar("archivo.json");
+
+        db.guardar("archivo.json");
+
+        expect(gestorArchivosMock.guardar).toHaveBeenCalledWith(
+            "archivo.json",
+            JSON.stringify([])
+        );
+    });
+
+    it("should throw error if guardar is called before cargar", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        expect(() => db.guardar("archivo.json")).toThrow("No hay datos cargados");
+    });
+});
+
+describe("JSONDB.buscar", () => {
+    let gestorArchivosMock: GestorArchivos;
+
+    beforeEach(() => {
+        gestorArchivosMock = {
+            cargar: jest.fn(),
+            guardar: jest.fn()
+        };
+    });
+
+    it("should return matching records using predicate", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        const records: TestRecord[] = [
+            { id: 1, name: "Alice" },
+            { id: 2, name: "Bob" },
+            { id: 3, name: "Alice" }
+        ];
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue(JSON.stringify(records));
+        db.cargar("archivo.json");
+
+        const result = db.buscar(r => r.name === "Alice");
+        expect(result).toEqual([
+            { id: 1, name: "Alice" },
+            { id: 3, name: "Alice" }
+        ]);
+    });
+
+    it("should return empty array if no records match", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        const records: TestRecord[] = [{ id: 1, name: "Alice" }];
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue(JSON.stringify(records));
+        db.cargar("archivo.json");
+
+        const result = db.buscar(r => r.name === "Bob");
+        expect(result).toEqual([]);
+    });
+
+    it("should throw error if buscar is called before cargar", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        expect(() => db.buscar(r => true)).toThrow("No hay datos cargados");
+    });
+});
+
+describe("JSONDB.buscarPrimero", () => {
+    let gestorArchivosMock: GestorArchivos;
+
+    beforeEach(() => {
+        gestorArchivosMock = {
+            cargar: jest.fn(),
+            guardar: jest.fn()
+        };
+    });
+
+    it("should return the first matching record using predicate", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        const records: TestRecord[] = [
+            { id: 1, name: "Alice" },
+            { id: 2, name: "Bob" },
+            { id: 3, name: "Alice" }
+        ];
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue(JSON.stringify(records));
+        db.cargar("archivo.json");
+
+        const result = db.buscarPrimero(r => r.name === "Alice");
+        expect(result).toEqual({ id: 1, name: "Alice" });
+    });
+
+    it("should return undefined if no records match", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        const records: TestRecord[] = [{ id: 1, name: "Alice" }];
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue(JSON.stringify(records));
+        db.cargar("archivo.json");
+
+        const result = db.buscarPrimero(r => r.name === "Bob");
+        expect(result).toBeUndefined();
+    });
+
+    it("should throw error if buscarPrimero is called before cargar", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        expect(() => db.buscarPrimero(r => true)).toThrow("No hay datos cargados");
+    });
+});

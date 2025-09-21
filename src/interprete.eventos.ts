@@ -1,11 +1,19 @@
+import { JSONDB } from "./json.db";
+
+const modoDebug = process.env.MODO === "DEBUG"
 
 export type Monto = {
     efectivo: number,
     transferencia: number
 }
 
-export interface Evento {
-    crudo: string;
+export interface EventoCalendario {
+    descripcion: string;
+    fecha: Date;
+}
+
+export interface EventoInterpretado {
+    crudo: EventoCalendario;
     descripcion: string;
     servicio: string;
     monto: Monto;
@@ -29,23 +37,110 @@ const servicios = [
     "RELAJANTE",
     "spa",
     "55", "75", "40", "60", "80", "35", "34"];
+const serviciosQueModificanMonto = [
+    servicios[0], servicios[1]
+]
 
-//"(?: (\$?(\d+(?:[.,]\d+)?)(?:\/(\d+(?:[.,]\d+)?))?))?"
-const patronNum = "\d+(?:[.]\d+)?"
-const grupoMonto = `(\\$?${patronNum}(?:\\/${patronNum}))`;
+const montoRegex = /(\$?\d+(?:[.]\d+)?(?:\/\$?\d+(?:[.]\d+)?)?)/;
 
-const regexConServicio = new RegExp(
-    `^(.*?) (${modificadorServicio} )?(${servicios.join("|")})(:? ${grupoMonto})?`, "i");
-const regexSinServicio = new RegExp(
-    `^(.*?) ${grupoMonto}`, "i");
+const regex = new RegExp(
+    `^(.*?) (?:(${modificadorServicio} )?(${servicios.join("|")}))(.*)`, "i");
 
-let calcularMontoParaServicioSinMonto: (servicio: string) => Monto = (s) => {
-    switch (s) {
-        default:
-            return {
-                efectivo: 1,
-                transferencia: 1
-            };
+export const calculadoraMontoParaServicioSinMontoDefault
+    : CalculadoraMontoParaServicio = (s) => {
+        switch (s) {
+            default:
+                return {
+                    efectivo: 0,
+                    transferencia: 0
+                };
+        }
+    }
+
+export const crearCalculadoraMontoParaServiciosSinMontoJsonDB
+    : (f: JSONDB<EventoInterpretado>) => CalculadoraMontoParaServicio = (f) => {
+        return (s) => {
+            const resultado = f
+                .buscarPrimero(e => e.servicio === s);
+
+            return resultado
+                ? resultado.monto
+                : calculadoraMontoParaServicioSinMontoDefault(s);
+        }
+    };
+
+const calcularMontoDesdeEvento = (segmentoMonto: string): Monto => {
+    if (segmentoMonto.includes("pago")) {
+        return montoVacio;
+    }
+
+    const match = segmentoMonto.match(montoRegex);
+
+    if (!match) {
+        return montoVacio;
+    }
+
+    if (match[1].includes("/")) {
+        return {
+            efectivo: parseFloat(match[1].split("/")[0]
+                .replace("$", "").replace(".", "")),
+            transferencia: parseFloat(match[1].split("/")[1]
+                .replace("$", "").replace(".", ""))
+        }
+    } else {
+        return {
+            efectivo: parseFloat((match[1]).replace("$", "")
+                .replace(".", "")),
+            transferencia: 0
+        }
+    }
+}
+
+export type CalculadoraMontoParaServicio = (servicio: string) => Monto;
+
+export const interpretar = (
+    evento: EventoCalendario,
+    calculadoraMontos?: CalculadoraMontoParaServicio): EventoInterpretado => {
+    let match = evento.descripcion.match(regex);
+
+    if (!match) {
+        return {
+            ...(modoDebug
+                ? {
+                    debug: {
+                        regex: regex,
+                        match: match
+                    }
+                }
+                : {}),
+            crudo: evento,
+            descripcion: "",
+            servicio: "",
+            monto: montoVacio,
+            error: true
+        }
+    }
+
+    return {
+        crudo: evento,
+        descripcion: match[1],
+        servicio: `${match[2] || ""}${match[3]}`,
+        monto: aplicarModificadorMonto(
+            match[4]
+                ? calcularMontoDesdeEvento(match[4])
+                : (calculadoraMontos ||
+                    calculadoraMontoParaServicioSinMontoDefault)(match[3]),
+            serviciosQueModificanMonto.includes(match[4])
+            || !!match[2]),
+        error: false,
+        ...(modoDebug
+            ? {
+                debug: {
+                    regex: regex,
+                    match: match
+                }
+            }
+            : {})
     }
 }
 
@@ -57,56 +152,5 @@ const aplicarModificadorMonto = (monto: Monto, modificador: boolean) => {
         }
     } else {
         return monto;
-    }
-}
-
-const calcularMontoDesdeEvento = (match: string): Monto => {
-    return {
-        efectivo: parseFloat(match.split("/")[0].replace("$", "").replace(".", "")),
-        transferencia: parseFloat(match.split("/")[1].replace(".", ""))
-    }
-}
-
-export const cambiarCalculoMontoParaServicioSinMonto = (funcion: (servicio: string) => Monto) => {
-    calcularMontoParaServicioSinMonto = funcion;
-}
-
-export const interpretar = (evento: string): Evento => {
-    let regex = regexConServicio;
-    let match = evento.match(regex);
-
-    if (!match) {
-        regex = regexSinServicio
-        match = evento.match(regex);
-
-        if (!match) {
-            return {
-                debug: {
-                    regex: regex,
-                    match: match
-                },
-                crudo: "Error => " + evento,
-                descripcion: "",
-                servicio: "",
-                monto: montoVacio,
-                error: true
-            }
-        }
-    }
-
-    return {
-        crudo: evento,
-        descripcion: match[1],
-        servicio: `${match[2] || ""}${match[3]}`,
-        monto: aplicarModificadorMonto(
-            match[4]
-                ? calcularMontoDesdeEvento(match[4])
-                : calcularMontoParaServicioSinMonto(match[3]),
-            !!match[2]),
-        error: false,
-        debug: {
-            regex: regex,
-            match: match
-        }
     }
 }
