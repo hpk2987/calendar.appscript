@@ -1,5 +1,5 @@
 // Import the function you want to test
-import { interpretar } from '../src/interprete.eventos';
+import { interpretar } from '../../src/calendario/interprete.eventos';
 
 describe('InterpreteEventos', () => {
   const fechaTest = new Date();

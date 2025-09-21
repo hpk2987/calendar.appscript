@@ -1,5 +1,5 @@
-import { JSONDB } from "../src/json.db";
-import { GestorArchivos } from "../src/gestor.archivos";
+import { JSONDB } from "../../src/db/json.db";
+import { GestorArchivos } from "../../src/archivos/gestor.archivos";
 
 type TestRecord = { id: number; name: string };
 
@@ -162,5 +162,36 @@ describe("JSONDB.buscarPrimero", () => {
     it("should throw error if buscarPrimero is called before cargar", () => {
         const db = new JSONDB<TestRecord>(gestorArchivosMock);
         expect(() => db.buscarPrimero(r => true)).toThrow("No hay datos cargados");
+    });
+});
+
+describe("JSONDB.agregarRegistro", () => {
+    let gestorArchivosMock: GestorArchivos;
+
+    beforeEach(() => {
+        gestorArchivosMock = {
+            cargar: jest.fn(),
+            guardar: jest.fn()
+        };
+    });
+
+    it("should add a new record to registros", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue(JSON.stringify([]));
+        db.cargar("archivo.json");
+
+        db.agregarRegistro({ id: 1, name: "Alice" });
+        db.agregarRegistro({ id: 2, name: "Bob" });
+
+        const result = db.buscar(() => true);
+        expect(result).toEqual([
+            { id: 1, name: "Alice" },
+            { id: 2, name: "Bob" }
+        ]);
+    });
+
+    it("should throw error if agregarRegistro is called before cargar", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        expect(() => db.agregarRegistro({ id: 1, name: "Alice" })).toThrow("No hay datos cargados");
     });
 });

@@ -1,4 +1,4 @@
-import { GestorArchivos } from "./gestor.archivos";
+import { GestorArchivos } from "../archivos/gestor.archivos";
 
 export class JSONDB<T> {
     private registros: T[] | undefined;
@@ -42,5 +42,10 @@ export class JSONDB<T> {
 
     buscarPrimero(predicate: (record: T) => boolean): T | undefined {
         return this.getRegistros().find(predicate);
+    }
+
+    agregarRegistro(registro: T): void {
+        const registros = this.getRegistros();
+        registros.push(registro);
     }
 }

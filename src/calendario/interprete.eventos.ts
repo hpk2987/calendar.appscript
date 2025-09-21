@@ -1,15 +1,11 @@
-import { JSONDB } from "./json.db";
+import { JSONDB } from "../db/json.db";
+import { EventoCalendario } from "./gestor.calendario";
 
 const modoDebug = process.env.MODO === "DEBUG"
 
 export type Monto = {
     efectivo: number,
     transferencia: number
-}
-
-export interface EventoCalendario {
-    descripcion: string;
-    fecha: Date;
 }
 
 export interface EventoInterpretado {

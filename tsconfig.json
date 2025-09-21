@@ -1,11 +1,18 @@
 {
   "compilerOptions": {
-    "lib": ["esnext"],
-    "target": "esnext",
+    "lib": [
+      "esnext"
+    ],
+    "target": "es2022",
+    "outDir": "./dist",
+    "rootDir": "./src", 
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "rootDir": "src",
-    "outDir": "dist",
-    "moduleResolution": "node"
+    "skipLibCheck": true
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ]
 }
