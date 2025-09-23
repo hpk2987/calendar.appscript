@@ -195,3 +195,41 @@ describe("JSONDB.agregarRegistro", () => {
         expect(() => db.agregarRegistro({ id: 1, name: "Alice" })).toThrow("No hay datos cargados");
     });
 });
+
+describe("JSONDB iterable", () => {
+    let gestorArchivosMock: GestorArchivos;
+
+    beforeEach(() => {
+        gestorArchivosMock = {
+            cargar: jest.fn(),
+            guardar: jest.fn()
+        };
+    });
+
+    it("should allow iteration over registros using for...of", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        const records: TestRecord[] = [
+            { id: 1, name: "Alice" },
+            { id: 2, name: "Bob" }
+        ];
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue(JSON.stringify(records));
+        db.cargar("archivo.json");
+
+        const result: TestRecord[] = [];
+        for (const registro of db) {
+            result.push(registro);
+        }
+
+        expect(result).toEqual(records);
+    });
+
+    it("should throw error if iterated before cargar", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        expect(() => {
+            // Attempt to iterate before cargar
+            // This will trigger getRegistros() and throw
+            // Spread operator triggers iteration
+            [...db];
+        }).toThrow("No hay datos cargados");
+    });
+});

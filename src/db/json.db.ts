@@ -48,4 +48,8 @@ export class JSONDB<T> {
         const registros = this.getRegistros();
         registros.push(registro);
     }
+
+    [Symbol.iterator](): Iterator<T> {
+        return this.getRegistros()[Symbol.iterator]();
+    }
 }
