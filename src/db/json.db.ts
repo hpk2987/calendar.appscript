@@ -15,6 +15,10 @@ export class JSONDB<T> {
         return this.registros;
     }
 
+    crear(){
+        this.registros = [];
+    }
+
     cargar(archivo: string): void {
         const contenido = this.gestorArchivos.cargar(archivo);
         if (!contenido) {
@@ -45,8 +49,7 @@ export class JSONDB<T> {
     }
 
     agregarRegistro(registro: T): void {
-        const registros = this.getRegistros();
-        registros.push(registro);
+        this.getRegistros().push(registro);
     }
 
     [Symbol.iterator](): Iterator<T> {

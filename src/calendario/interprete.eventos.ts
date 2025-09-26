@@ -5,7 +5,8 @@ const modoDebug = process.env.MODO === "DEBUG"
 
 export type Monto = {
     efectivo: number,
-    transferencia: number
+    transferencia: number,
+    modificador: number
 }
 
 export interface EventoInterpretado {
@@ -20,10 +21,11 @@ export interface EventoInterpretado {
     }
 }
 
-const montoVacio = {
+const montoVacio = (modificador: number) => ({
     efectivo: 0,
-    transferencia: 0
-}
+    transferencia: 0,
+    modificador: modificador
+})
 
 
 const modificadorServicio = "pareja";
@@ -42,38 +44,15 @@ const montoRegex = /(\$?\d+(?:[.]\d+)?(?:\/\$?\d+(?:[.]\d+)?)?)/;
 const regex = new RegExp(
     `^(.*?) (?:(${modificadorServicio} )?(${servicios.join("|")}))(.*)`, "i");
 
-export const calculadoraMontoParaServicioSinMontoDefault
-    : CalculadoraMontoParaServicio = (s) => {
-        switch (s) {
-            default:
-                return {
-                    efectivo: 0,
-                    transferencia: 0
-                };
-        }
-    }
-
-export const crearCalculadoraMontoParaServiciosSinMontoJsonDB
-    : (f: JSONDB<EventoInterpretado>) => CalculadoraMontoParaServicio = (f) => {
-        return (s) => {
-            const resultado = f
-                .buscarPrimero(e => e.servicio === s);
-
-            return resultado
-                ? resultado.monto
-                : calculadoraMontoParaServicioSinMontoDefault(s);
-        }
-    };
-
-const calcularMontoDesdeEvento = (segmentoMonto: string): Monto => {
+const calcularMontoDesdeEvento = (segmentoMonto: string, modificador: number): Monto => {
     if (segmentoMonto.includes("pago")) {
-        return montoVacio;
+        return montoVacio(modificador);
     }
 
     const match = segmentoMonto.match(montoRegex);
 
     if (!match) {
-        return montoVacio;
+        return montoVacio(modificador);
     }
 
     if (match[1].includes("/")) {
@@ -81,22 +60,22 @@ const calcularMontoDesdeEvento = (segmentoMonto: string): Monto => {
             efectivo: parseFloat(match[1].split("/")[0]
                 .replace("$", "").replace(".", "")),
             transferencia: parseFloat(match[1].split("/")[1]
-                .replace("$", "").replace(".", ""))
+                .replace("$", "").replace(".", "")),
+            modificador
         }
     } else {
         return {
             efectivo: parseFloat((match[1]).replace("$", "")
                 .replace(".", "")),
-            transferencia: 0
+            transferencia: 0,
+            modificador
         }
     }
 }
 
-export type CalculadoraMontoParaServicio = (servicio: string) => Monto;
+export type CalculadoraMontoParaServicio = (servicio: string, modificador: number) => Monto;
 
-export const interpretar = (
-    evento: EventoCalendario,
-    calculadoraMontos?: CalculadoraMontoParaServicio): EventoInterpretado => {
+export const interpretar = (evento: EventoCalendario): EventoInterpretado => {
     let match = evento.descripcion.match(regex);
 
     if (!match) {
@@ -112,22 +91,24 @@ export const interpretar = (
             crudo: evento,
             descripcion: "",
             servicio: "",
-            monto: montoVacio,
+            monto: montoVacio(0),
             error: true
         }
     }
 
+    const descripcion = match[1];
+    const servicio = `${match[2] || ""}${match[3]}`;
+    const modificador = (serviciosQueModificanMonto
+        .includes(match[3]) || !!match[2])
+        ? 0.5 : 1;
+
     return {
         crudo: evento,
-        descripcion: match[1],
-        servicio: `${match[2] || ""}${match[3]}`,
-        monto: aplicarModificadorMonto(
-            match[4]
-                ? calcularMontoDesdeEvento(match[4])
-                : (calculadoraMontos ||
-                    calculadoraMontoParaServicioSinMontoDefault)(match[3]),
-            serviciosQueModificanMonto.includes(match[4])
-            || !!match[2]),
+        descripcion,
+        servicio,
+        monto: match[4]
+            ? calcularMontoDesdeEvento(match[4], modificador)
+            : (montoVacio)(modificador),
         error: false,
         ...(modoDebug
             ? {
@@ -137,16 +118,5 @@ export const interpretar = (
                 }
             }
             : {})
-    }
-}
-
-const aplicarModificadorMonto = (monto: Monto, modificador: boolean) => {
-    if (modificador) {
-        return {
-            efectivo: monto.efectivo / 2,
-            transferencia: monto.transferencia / 2
-        }
-    } else {
-        return monto;
     }
 }
