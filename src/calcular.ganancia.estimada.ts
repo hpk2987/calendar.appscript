@@ -8,11 +8,12 @@ import { printAsLocalNumber } from './utils/string.utils';
 const jsonDB = new JSONDB<EventoInterpretado>(gestorArchivosLocal);
 jsonDB.cargar("./data/corregido.json");
 
+const factor = 0.35;
 const inicio = new Date(new Date().getFullYear(), 0, 1); // Jan 1, 00:00:00
 const fin = new Date(); // Now
 const calculoTotal = calcularGananciaEstimada(
     jsonDB,
-    0.35,
+    factor,
     inicio,
     fin
 );
@@ -24,5 +25,5 @@ console.log("Anual => " + inspect({
 
 console.log("Mensual => " + inspect(generarReporteAgregado(
     jsonDB,
-    0.35
+    factor
 )));
