@@ -1,4 +1,3 @@
-import { JSONDB } from "../db/json.db";
 import { EventoCalendario } from "./gestor.calendario";
 
 const modoDebug = process.env.MODO === "DEBUG"
@@ -41,6 +40,7 @@ const serviciosQueModificanMonto = [
 
 const montoRegex = /(\$?\d+(?:[.]\d+)?(?:\/\$?\d+(?:[.]\d+)?)?)/;
 
+// Primer intento de regexp, confiable solo falla cuando no hay servicio
 const regex = new RegExp(
     `^(.*?) (?:(${modificadorServicio} )?(${servicios.join("|")}))(.*)`, "i");
 
@@ -73,8 +73,6 @@ const calcularMontoDesdeEvento = (segmentoMonto: string, modificador: number): M
     }
 }
 
-export type CalculadoraMontoParaServicio = (servicio: string, modificador: number) => Monto;
-
 export const interpretar = (evento: EventoCalendario): EventoInterpretado => {
     let match = evento.descripcion.match(regex);
 
@@ -97,7 +95,7 @@ export const interpretar = (evento: EventoCalendario): EventoInterpretado => {
     }
 
     const descripcion = match[1];
-    const servicio = `${match[2] || ""}${match[3]}`;
+    const servicio = `${match[2] || ""}${match[3] || ""}`;
     const modificador = (serviciosQueModificanMonto
         .includes(match[3]) || !!match[2])
         ? 0.5 : 1;
