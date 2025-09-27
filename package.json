@@ -8,6 +8,7 @@
     "build": "tsc",
     "init:db": "node ./dist/incializar.db.desde.ics.js", 
     "completar:db": "node ./dist/completar.montos.vacios.js", 
+    "calcular": "node  ./dist/calcular.ganancia.estimada.js", 
     "test": "jest",
     "test:debug": "node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand"
   },
