@@ -19,11 +19,11 @@ const calculoTotal = calcularGananciaEstimada(
 );
 
 console.log("Anual => " + inspect({
-    total : printAsLocalNumber(calculoTotal.total),
+    total: printAsLocalNumber(calculoTotal.total),
     cantidadEventos: calculoTotal.cantidadEventos
 }));
 
 console.log("Mensual => " + inspect(generarReporteAgregado(
     jsonDB,
     factor
-)));
+), { depth: 4 }));

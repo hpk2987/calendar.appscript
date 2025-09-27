@@ -76,7 +76,8 @@ export interface ReporteAgregado {
         promedioMensual: string,
         desvio: string,
         cantidadEventos: number
-    }
+    },
+    errores: Array<EventoInterpretado>
 }
 
 export function generarReporteAgregado(
@@ -100,6 +101,10 @@ export function generarReporteAgregado(
             cantidadEventos: 0
         });
     return {
+        errores: db.buscar(x => {
+            const f = new Date(x.crudo.fecha);
+            return f >= pairs[0].start && f <= pairs[pairs.length - 1].end && x.error;
+        }),
         mensuales: mensuales.map(x => ({
             cantidadEventos: x.calculo.cantidadEventos,
             total: printAsLocalNumber(x.calculo.total),
