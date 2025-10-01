@@ -30,7 +30,6 @@ const montoVacio = (modificador: number) => ({
 const modificadorServicio = "pareja";
 const servicios = [
     "x4 manos", "4 manos",
-    "4\\/4",
     "RELAJANTE",
     "spa",
     "55", "75", "40", "60", "80", "35", "34"];
@@ -38,7 +37,7 @@ const serviciosQueModificanMonto = [
     servicios[0], servicios[1]
 ]
 
-const montoRegex = /(\$?\d+(?:[.]\d+)?(?:\/\$?\d+(?:[.]\d+)?)?)/;
+const montoRegex = /(\$?\d+(?:[.]\d+)?(?:\/\$?\d+(?:[.]\d+)?)?)/g;
 
 // Primer intento de regexp, confiable solo falla cuando no hay servicio
 const regex = new RegExp(
@@ -55,17 +54,27 @@ const calcularMontoDesdeEvento = (segmentoMonto: string, modificador: number): M
         return montoVacio(modificador);
     }
 
-    if (match[1].includes("/")) {
+    if(match.length>2){
+        return montoVacio(0);
+    }
+
+    const dinero = match.length == 2 ? match[1] : match[0];
+
+    if (dinero.match(/[^\d]+\d\/\d[^\d]+/)) {
+        return montoVacio(0);
+    }
+
+    if (dinero.includes("/")) {
         return {
-            efectivo: parseFloat(match[1].split("/")[0]
+            efectivo: parseFloat(dinero.split("/")[0]
                 .replace("$", "").replace(".", "")),
-            transferencia: parseFloat(match[1].split("/")[1]
+            transferencia: parseFloat(dinero.split("/")[1]
                 .replace("$", "").replace(".", "")),
             modificador
         }
     } else {
         return {
-            efectivo: parseFloat((match[1]).replace("$", "")
+            efectivo: parseFloat((dinero).replace("$", "")
                 .replace(".", "")),
             transferencia: 0,
             modificador
