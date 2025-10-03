@@ -41,7 +41,7 @@ describe('InterpreteEventos', () => {
         error: false,
         monto: {
           efectivo: 22000,
-          modificador: 1,
+          modificador: 0.95,
           transferencia: 44000
         }
       });

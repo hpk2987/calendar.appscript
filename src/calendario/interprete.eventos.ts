@@ -59,6 +59,8 @@ const calcularMontoDesdeEvento = (segmentoMonto: string, modificador: number): M
     }
 
     const dinero = match.length == 2 ? match[1] : match[0];
+    // Si hay pack reducir el modificador
+    modificador = match.length == 2 ? ((modificador-0.05)*modificador) : modificador;
 
     if (dinero.match(/[^\d]+\d\/\d[^\d]+/)) {
         return montoVacio(0);
