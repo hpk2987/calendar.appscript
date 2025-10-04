@@ -36,6 +36,10 @@ export class JSONDB<T> {
         }
     }
 
+    ordenar(comparador : (r1:T,r2:T) => number):void{
+        this.registros = this.getRegistros().sort(comparador);
+    }
+
     guardar(archivo: string): void {
         this.gestorArchivos.guardar(archivo, JSON.stringify(this.getRegistros()));
     }

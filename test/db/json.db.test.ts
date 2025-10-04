@@ -82,6 +82,36 @@ describe("JSONDB.guardar", () => {
     });
 });
 
+describe("JSONDB.ordenar",() =>{
+    let gestorArchivosMock: GestorArchivos;
+
+    beforeEach(() => {
+        gestorArchivosMock = {
+            cargar: jest.fn(),
+            guardar: jest.fn()
+        };
+    });
+
+    it("should sort records using predicate", () => {
+        const db = new JSONDB<TestRecord>(gestorArchivosMock);
+        const records: TestRecord[] = [
+            { id: 1, name: "Janice" },
+            { id: 2, name: "Bob" },
+            { id: 3, name: "Anna" }
+        ];
+        (gestorArchivosMock.cargar as jest.Mock).mockReturnValue(JSON.stringify(records));
+        db.cargar("archivo.json");
+
+        db.ordenar((r1,r2) => r1.name.localeCompare(r2.name));
+        const result = db.buscar(() => true);
+        expect(result).toEqual([
+            { id: 3, name: "Anna" },
+            { id: 2, name: "Bob" },
+            { id: 1, name: "Janice" }
+        ]);
+    });
+});
+
 describe("JSONDB.buscar", () => {
     let gestorArchivosMock: GestorArchivos;
 
