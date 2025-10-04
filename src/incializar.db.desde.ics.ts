@@ -26,6 +26,10 @@ crearGestorCalendarioLocal("./data/data.ics")
         m.push(e);
         jsonDB.agregarRegistro(e)
       });
+    jsonDB.ordenar((r1,r2) => 
+      // The expression relies on boolean results (true/false) being coerced to 1 or 0
+      // in an arithmetic operation.
+      +(r1.crudo.fecha > r2.crudo.fecha) - +(r1.crudo.fecha < r2.crudo.fecha))
     jsonDB.guardar(dbFile);
     console.log("Fin");
   });
